@@ -85,74 +85,36 @@ python sequential_recsys_amazondataset.py
 
 ## Model files
 
-The model code is under `Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/`.
-
-### Proposed model
-
-| Implementation | Source | Configuration | `model_sel` |
-| --- | --- | --- | --- |
-| ILMN: Time4LSTM version, closest to the IL2MC architecture described in the paper | [ILMN.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/ILMN.py) | [ILMN.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/ILMN.yaml) | `"ILMN"` |
-| AILMN: attention-based variant | [AILMN.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/AILMN.py) | [AILMN.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/AILMN.yaml) | `"AILMN"` |
-
-Both files contain multi-scale locality modeling, ideal-interest learning, and adaptive mutation calibration. Their Python class is still named `DPRNN4RecModel`; the runner selects the implementation by its module name. The runner currently defaults to `"AILMN"`. Use `"ILMN"` for the Time4LSTM version.
-
-[rnn_cell_implement.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/rnn_cell_implement.py) provides the Time4LSTM cell. [TiSASRec_Modules.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/TiSASRec_Modules.py) supplies attention layers used by AILMN. These are supporting modules.
-
-### Paper baselines
-
-The paper compares IL2MC with the following six methods (Section 6.1.3).
-
-| Method | Description |
+| Model | File location |
 | --- | --- |
-| GRU4Rec | Uses recurrent units to learn sequential behavior and short-term interests. |
-| Caser | Applies convolutional filters to recent interactions to learn sequential patterns. |
-| SLi-Rec | Combines time-aware and content-aware recurrent modeling with adaptive fusion of long-term and short-term interests. |
-| CLSR | Uses separate encoders and self-supervised learning to disentangle long-term and short-term interests. |
-| SAPM | Uses preference stability scores to combine long-term interests, short-term interests, and candidate features. |
-| SUM | Maintains multiple interest channels to represent different aspects of user preferences in long sequences. |
-
-The following files are selected by [sequential_recsys_amazondataset.py](Disentangling_Interest_Network_for_Sequential_Recommendation/examples/00_quick_start/sequential_recsys_amazondataset.py):
-
-| Baseline | Source | Configuration | `model_sel` |
-| --- | --- | --- | --- |
-| GRU4Rec | [gru4rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/gru4rec.py) | [gru4rec.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/gru4rec.yaml) | `"gru4rec"` |
-| Caser | [caser.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/caser.py) | [caser.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/caser.yaml) | `"caser"` |
-| SLi-Rec | [sli_rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sli_rec.py) | [sli_rec.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/sli_rec.yaml) | `"sli_rec"` |
-| SUM | [sum.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sum.py) | [sum.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/sum.yaml) | `"sum"` |
-| CLSR | Not included in this snapshot | — | — |
-| SAPM | Not included in this snapshot | — | — |
-
-Set `model_sel` in the runner to the value above, then use the training command. CLSR and SAPM are listed in the paper, but no matching implementation or runner option was found in this repository.
+| IL2MC / ILMN (ours) | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/ILMN.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/ILMN.py) |
+| AILMN (variant) | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/AILMN.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/AILMN.py) |
+| GRU4Rec | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/gru4rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/gru4rec.py) |
+| Caser | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/caser.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/caser.py) |
+| SLi-Rec | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sli_rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sli_rec.py) |
+| SUM | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sum.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sum.py) |
+| CLSR | Not included in this repository |
+| SAPM | Not included in this repository |
 
 ## Experimental settings
 
-These settings are reported in Sections 4.1 and 6.1 of *Calibrating Interest Mutation with Locality Modeling for Sequential Recommendation*.
+Settings reported in the paper (Sections 4.1 and 6.1).
 
-### Data and evaluation
-
-- Apply iterative 10-core filtering to users and items.
-- Sort interactions globally by time, then split them into training, validation, and test sets at an 8:1:1 ratio.
-- Sample negative items from those the user has not interacted with. The positive-to-negative ratio is 1:4 for training and validation, and 1:99 for testing.
-- Evaluate with MRR, HR, NDCG, and Group AUC (GAUC). Table 3 reports MRR, HR@2, NDCG@2, and GAUC; Figure 9 also compares HR@K and NDCG@K at other cutoffs.
-
-### Model and training
-
-| Setting | Value reported in the paper |
+| Setting | Value |
 | --- | --- |
-| Framework | Microsoft Recommenders |
+| Datasets | Taobao, MovieLens, Kuaishou |
+| Filtering | Iterative 10-core filtering |
+| Data split | Global chronological split, train/validation/test = 8:1:1 |
+| Negative sampling | Random items the user has not interacted with |
+| Positive-to-negative ratio | 1:4 for training and validation; 1:99 for testing |
+| Metrics | MRR, HR@2, NDCG@2, GAUC (Table 3) |
+| Maximum sequence length | 50 for Taobao, MovieLens, and Kuaishou_50; 100 for Kuaishou_100 |
+| Segmentation scales | 3 for Taobao, MovieLens, and Kuaishou_50; 4 for Kuaishou_100 |
 | Learning rate | `1e-3` |
 | Batch size | `400` |
-| Prediction MLP hidden layers | `[80, 40]` |
-| L2 regularization strength | `1e-6` |
-| Training environment | Linux, NVIDIA RTX 4090, CUDA 11.6 |
+| Prediction MLP | `[80, 40]` |
+| L2 regularization | `1e-6` |
+| Framework | Microsoft Recommenders |
+| Hardware / software | NVIDIA RTX 4090, Linux, CUDA 11.6 |
 
-| Dataset setting | Maximum sequence length | Number of segmentation scales (`step_L`) |
-| --- | --- | --- |
-| Taobao | 50 | 3 |
-| MovieLens | 50 | 3 |
-| Kuaishou_50 | 50 | 3 |
-| Kuaishou_100 | 100 | 4 |
-
-`Kuaishou_50` and `Kuaishou_100` use the same dataset with different history truncation lengths.
-
-The checked-in YAML files differ from the paper settings: `ILMN.yaml` and `AILMN.yaml` use `batch_size: 500` and prediction `layer_sizes: [100, 64]`; `ILMN.yaml` also has `step_L: 1`. Adjust these values and `max_seq_length` in the selected configuration when reproducing the paper. `att_fcn_layer_sizes` controls the attention networks, not the prediction MLP.
+YAML defaults may differ from these paper settings.
