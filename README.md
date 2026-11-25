@@ -25,7 +25,7 @@ Download the datasets from the links below. Data files and training outputs are 
 Extract and rename the files, then place them in:
 
 ```text
-Disentangling_Interest_Network_for_Sequential_Recommendation/
+IL2MC/
   tests/resources/deeprec/slirec/
 ```
 
@@ -34,7 +34,7 @@ Disentangling_Interest_Network_for_Sequential_Recommendation/
 Run from the repository root. Set `$dataset` to `taobao`, `ml`, or `kuaishou`.
 
 ```powershell
-Set-Location "Disentangling_Interest_Network_for_Sequential_Recommendation"
+Set-Location "IL2MC"
 $env:PYTHONPATH = (Get-Location).Path
 $dataset = "taobao"
 
@@ -87,12 +87,12 @@ python sequential_recsys_amazondataset.py
 
 | Model | File location |
 | --- | --- |
-| IL2MC / ILMN (ours) | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/ILMN.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/ILMN.py) |
-| AILMN (variant) | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/AILMN.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/AILMN.py) |
-| GRU4Rec | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/gru4rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/gru4rec.py) |
-| Caser | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/caser.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/caser.py) |
-| SLi-Rec | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sli_rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sli_rec.py) |
-| SUM | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sum.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sum.py) |
+| IL2MC(ours) | [IL2MC/recommenders/models/deeprec/models/sequential/ILMN.py](IL2MC/recommenders/models/deeprec/models/sequential/ILMN.py) |
+| AILMN | [IL2MC/recommenders/models/deeprec/models/sequential/AILMN.py](IL2MC/recommenders/models/deeprec/models/sequential/AILMN.py) |
+| GRU4Rec | [IL2MC/recommenders/models/deeprec/models/sequential/gru4rec.py](IL2MC/recommenders/models/deeprec/models/sequential/gru4rec.py) |
+| Caser | [IL2MC/recommenders/models/deeprec/models/sequential/caser.py](IL2MC/recommenders/models/deeprec/models/sequential/caser.py) |
+| SLi-Rec | [IL2MC/recommenders/models/deeprec/models/sequential/sli_rec.py](IL2MC/recommenders/models/deeprec/models/sequential/sli_rec.py) |
+| SUM | [IL2MC/recommenders/models/deeprec/models/sequential/sum.py](IL2MC/recommenders/models/deeprec/models/sequential/sum.py) |
 
 ## Experimental settings
 

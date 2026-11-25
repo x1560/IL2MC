@@ -35,7 +35,7 @@ import os
 
 
 tf.get_logger().setLevel('ERROR') # only show error messages
-sys.path.append("/home/lisong/SNA/Disentangling_Interest_Network_for_Sequential_Recommendation")
+sys.path.append("/home/lisong/SNA/IL2MC")
 from recommenders.datasets import dium_amazon_reviews
 from recommenders.utils.timer import Timer
 from recommenders.utils.constants import SEED

@@ -713,7 +713,7 @@ class DIUMModel(SequentialBaseModel):
         userDict,itemDict,cateDict=self.iterator.userdict,self.iterator.itemdict,self.iterator.catedict
         testUser=np.random.choice(list(userDict.values()),5)
         print("+++++++++++++\ntestUser: {}+++++++++++++++++\n".format(testUser))
-        #/home/lisong/SNA/Disentangling_Interest_Network_for_Sequential_Recommendation/examples/00_quick_start
+        #/home/lisong/SNA/IL2MC/examples/00_quick_start
         logPath="./expLog"
         for uid in testUser:
             dataIdxOfUid=np.where(expUser==uid)

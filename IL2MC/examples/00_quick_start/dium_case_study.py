@@ -163,7 +163,7 @@ if __name__ == '__main__':
     # testUser=[5,72,233]
     # testUser=[15795 , 860 ,6265, 37194]
     testUser = [860]
-    #/home/lisong/SNA/Disentangling_Interest_Network_for_Sequential_Recommendation/examples/00_quick_start
+    #/home/lisong/SNA/IL2MC/examples/00_quick_start
     logPath="./expLog"
     with open(logPath + "/dicts.pkl", "rb") as dictFile:
         userDict, itemDict, cateDict=pickle.load(dictFile)
@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
 
 
-    item2cate,cate_freq=metaProcess("/home/lisong/SNA/Disentangling_Interest_Network_for_Sequential_Recommendation/tests/resources/deeprec/slirec/meta_CDs_and_Vinyl.json")
+    item2cate,cate_freq=metaProcess("/home/lisong/SNA/IL2MC/tests/resources/deeprec/slirec/meta_CDs_and_Vinyl.json")
     for uid in testUser:
         # print("=====test uid={}".format(uid))
         # with open(logPath+"/{}_expData.pkl".format(uid),"rb") as logFile:

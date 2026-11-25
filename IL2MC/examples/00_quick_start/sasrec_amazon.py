@@ -35,7 +35,7 @@ import pandas as pd
 from collections import defaultdict
 import tensorflow as tf
 tf.get_logger().setLevel('ERROR') # only show error messages
-sys.path.append("/home/lisong/SNA/Disentangling_Interest_Network_for_Sequential_Recommendation")
+sys.path.append("/home/lisong/SNA/IL2MC")
 
 from recommenders.utils.timer import Timer
 from recommenders.datasets.amazon_reviews import get_review_data, _reviews_preprocessing

@@ -14,12 +14,12 @@ python -m pip install -r requirements.txt
 
 ## 2. Run the model
 
-To run the implementation closest to the paper's IL2MC model, change `model_sel="AILMN"` to `model_sel="ILMN"` in `Disentangling_Interest_Network_for_Sequential_Recommendation/examples/00_quick_start/sequential_recsys_amazondataset.py`. Otherwise, the script runs AILMN.
+To run the implementation closest to the paper's IL2MC model, change `model_sel="AILMN"` to `model_sel="ILMN"` in `IL2MC/examples/00_quick_start/sequential_recsys_amazondataset.py`. Otherwise, the script runs AILMN.
 
 From the `SNA` directory, run:
 
 ```powershell
-$env:PYTHONPATH = Join-Path (Get-Location).Path "Disentangling_Interest_Network_for_Sequential_Recommendation"
+$env:PYTHONPATH = Join-Path (Get-Location).Path "IL2MC"
 Set-Location (Join-Path $env:PYTHONPATH "examples\00_quick_start")
 python sequential_recsys_amazondataset.py
 ```
