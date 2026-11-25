@@ -1,15 +1,16 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-import tensorflow as tf
-from reco_utils.recommender.deeprec.models.sequential.sequential_base_model import (
+import tensorflow.compat.v1 as tf
+from recommenders.models.deeprec.models.sequential.sequential_base_model import (
     SequentialBaseModel,
 )
-from tensorflow.nn import dynamic_rnn
-from reco_utils.recommender.deeprec.models.sequential.rnn_cell_implement import (
-    Time4LSTMCell,MYGRUCell
+from tensorflow.compat.v1.nn import dynamic_rnn
+from tensorflow.python.ops.rnn_cell_impl import GRUCell, LSTMCell
+from recommenders.models.deeprec.models.sequential.rnn_cell_implement import (
+    Time4LSTMCell as _BaseTime4LSTMCell,
 )
-from reco_utils.recommender.deeprec.deeprec_utils import load_dict
+from recommenders.models.deeprec.deeprec_utils import HParams, load_dict
 
 import os
 import numpy as np
@@ -17,7 +18,71 @@ import numpy as np
 __all__ = ["CLSRModel"]
 
 
+class Time4LSTMCell(_BaseTime4LSTMCell):
+    """Keep the shared cell unchanged and replace its legacy affine helper locally."""
+
+    def __init__(self, num_units):
+        super().__init__(num_units)
+        self._clsr_kernel = None
+        self._clsr_bias = None
+        self._linear1 = self._project_gates
+
+    def _project_gates(self, args):
+        if self._clsr_kernel is None:
+            input_size = sum(value.shape.as_list()[1] for value in args)
+            self._clsr_kernel = tf.get_variable(
+                "kernel", [input_size, 4 * self._num_units], dtype=args[0].dtype,
+                initializer=self._initializer,
+            )
+            self._clsr_bias = tf.get_variable(
+                "bias", [4 * self._num_units], dtype=args[0].dtype,
+                initializer=tf.zeros_initializer(),
+            )
+        return tf.nn.bias_add(
+            tf.matmul(tf.concat(args, axis=1), self._clsr_kernel), self._clsr_bias
+        )
+
+
 class CLSRModel(SequentialBaseModel):
+    """CLSR adapted to this repository's TF2 graph-mode base and iterator.
+
+    Source: https://github.com/tsinghua-fib-lab/CLSR
+    """
+
+    def __init__(self, hparams, iterator_creator, graph=None, seed=None):
+        # The original runner supplied these CLSR options as flags. Preserve
+        # existing configuration values and fill only missing model options.
+        defaults = {
+            "sequential_model": "time4lstm",
+            "interest_evolve": True,
+            "predict_long_short": True,
+            "manual_alpha": False,
+            "manual_alpha_value": 0.5,
+            "contrastive_loss": "triplet",
+            "contrastive_length_threshold": 5,
+            "contrastive_recent_k": 3,
+            "triplet_margin": 1.0,
+            "contrastive_loss_weight": 0.1,
+            "discrepancy_loss_weight": 0.01,
+            "embedding_dropout": 0.0,
+            "useCate": True,
+            "time_range": 30,
+            "filter_name_key": [],
+        }
+        values = hparams.values().copy()
+        for key, value in defaults.items():
+            values.setdefault(key, value)
+        hparams = HParams(values)
+        feature_size = hparams.item_embedding_dim
+        if hparams.values().get("useCate", False):
+            feature_size += hparams.cate_embedding_dim
+        if hparams.hidden_size != feature_size:
+            raise ValueError("CLSR hidden_size must match the item/category feature size")
+        if hparams.contrastive_recent_k < 1:
+            raise ValueError("contrastive_recent_k must be positive")
+        if not 0.0 <= hparams.embedding_dropout < 1.0:
+            raise ValueError("embedding_dropout must be in [0, 1)")
+        super().__init__(hparams, iterator_creator, graph=graph, seed=seed)
 
     def _get_loss(self):
         """Make loss function, consists of data loss, regularization loss, contrastive loss and discrepancy loss
@@ -50,21 +115,25 @@ class CLSRModel(SequentialBaseModel):
             tf.ones_like(self.sequence_length, dtype=tf.float32),
             tf.zeros_like(self.sequence_length, dtype=tf.float32)
         )
+        contrastive_count = tf.maximum(tf.reduce_sum(contrastive_mask), 1.0)
         if self.hparams.contrastive_loss == 'bpr':
-            long_mean_recent_loss = tf.reduce_sum(contrastive_mask*tf.math.softplus(tf.reduce_sum(self.att_fea_long*(-self.hist_mean + self.hist_recent), -1)))/tf.reduce_sum(contrastive_mask)
-            short_recent_mean_loss = tf.reduce_sum(contrastive_mask*tf.math.softplus(tf.reduce_sum(self.att_fea_short*(-self.hist_recent + self.hist_mean), -1)))/tf.reduce_sum(contrastive_mask)
-            mean_long_short_loss = tf.reduce_sum(contrastive_mask*tf.math.softplus(tf.reduce_sum(self.hist_mean*(-self.att_fea_long + self.att_fea_short), -1)))/tf.reduce_sum(contrastive_mask)
-            recent_short_long_loss = tf.reduce_sum(contrastive_mask*tf.math.softplus(tf.reduce_sum(self.hist_recent*(-self.att_fea_short + self.att_fea_long), -1)))/tf.reduce_sum(contrastive_mask)
+            long_mean_recent_loss = tf.reduce_sum(contrastive_mask*tf.math.softplus(tf.reduce_sum(self.att_fea_long*(-self.hist_mean + self.hist_recent), -1)))/contrastive_count
+            short_recent_mean_loss = tf.reduce_sum(contrastive_mask*tf.math.softplus(tf.reduce_sum(self.att_fea_short*(-self.hist_recent + self.hist_mean), -1)))/contrastive_count
+            mean_long_short_loss = tf.reduce_sum(contrastive_mask*tf.math.softplus(tf.reduce_sum(self.hist_mean*(-self.att_fea_long + self.att_fea_short), -1)))/contrastive_count
+            recent_short_long_loss = tf.reduce_sum(contrastive_mask*tf.math.softplus(tf.reduce_sum(self.hist_recent*(-self.att_fea_short + self.att_fea_long), -1)))/contrastive_count
         elif self.hparams.contrastive_loss == 'triplet':
             margin = self.hparams.triplet_margin
             distance_long_mean = tf.square(self.att_fea_long - self.hist_mean)
             distance_long_recent = tf.square(self.att_fea_long - self.hist_recent)
             distance_short_mean = tf.square(self.att_fea_short - self.hist_mean)
             distance_short_recent = tf.square(self.att_fea_short - self.hist_recent)
-            long_mean_recent_loss = tf.reduce_sum(contrastive_mask*tf.reduce_sum(tf.maximum(0.0, distance_long_mean - distance_long_recent + margin), -1))/tf.reduce_sum(contrastive_mask)
-            short_recent_mean_loss= tf.reduce_sum(contrastive_mask*tf.reduce_sum(tf.maximum(0.0, distance_short_recent - distance_short_mean + margin), -1))/tf.reduce_sum(contrastive_mask)
-            mean_long_short_loss = tf.reduce_sum(contrastive_mask*tf.reduce_sum(tf.maximum(0.0, distance_long_mean - distance_short_mean + margin), -1))/tf.reduce_sum(contrastive_mask)
-            recent_short_long_loss = tf.reduce_sum(contrastive_mask*tf.reduce_sum(tf.maximum(0.0, distance_short_recent - distance_long_recent + margin), -1))/tf.reduce_sum(contrastive_mask)
+            long_mean_recent_loss = tf.reduce_sum(contrastive_mask*tf.reduce_sum(tf.maximum(0.0, distance_long_mean - distance_long_recent + margin), -1))/contrastive_count
+            short_recent_mean_loss= tf.reduce_sum(contrastive_mask*tf.reduce_sum(tf.maximum(0.0, distance_short_recent - distance_short_mean + margin), -1))/contrastive_count
+            mean_long_short_loss = tf.reduce_sum(contrastive_mask*tf.reduce_sum(tf.maximum(0.0, distance_long_mean - distance_short_mean + margin), -1))/contrastive_count
+            recent_short_long_loss = tf.reduce_sum(contrastive_mask*tf.reduce_sum(tf.maximum(0.0, distance_short_recent - distance_long_recent + margin), -1))/contrastive_count
+
+        else:
+            raise ValueError("contrastive_loss must be 'bpr' or 'triplet'")
 
         contrastive_loss = long_mean_recent_loss + short_recent_mean_loss + mean_long_short_loss + recent_short_long_loss
         contrastive_loss = tf.multiply(self.hparams.contrastive_loss_weight, contrastive_loss)
@@ -126,12 +195,17 @@ class CLSRModel(SequentialBaseModel):
         )
         self.embed_params.append(self.involved_user_short_embedding)
 
-        # dropout after embedding
+        # Match the base class training/evaluation switch without extra feeds.
+        embedding_keep_prob = tf.where(
+            self.is_train_stage,
+            tf.constant(1.0 - self.hparams.embedding_dropout, dtype=tf.float32),
+            tf.constant(1.0, dtype=tf.float32),
+        )
         self.user_long_embedding = self._dropout(
-            self.user_long_embedding, keep_prob=self.embedding_keeps
+            self.user_long_embedding, keep_prob=embedding_keep_prob
         )
         self.user_short_embedding = self._dropout(
-            self.user_short_embedding, keep_prob=self.embedding_keeps
+            self.user_short_embedding, keep_prob=embedding_keep_prob
         )
 
     def _build_seq_graph(self):
@@ -142,9 +216,8 @@ class CLSRModel(SequentialBaseModel):
         """
         hparams = self.hparams
         with tf.variable_scope("clsr"):
-            hist_input = tf.concat(
-                [self.item_history_embedding, self.cate_history_embedding], 2
-            )
+            # The current base class already appends category embeddings.
+            hist_input = self.item_history_embedding
             self.mask = self.iterator.mask
             self.real_mask = tf.cast(self.mask, tf.float32)
             self.sequence_length = tf.reduce_sum(self.mask, 1)
@@ -154,13 +227,16 @@ class CLSRModel(SequentialBaseModel):
                 self.att_fea_long = tf.reduce_sum(att_outputs_long, 1)
                 tf.summary.histogram("att_fea_long", self.att_fea_long)
 
-                self.hist_mean = tf.reduce_sum(hist_input*tf.expand_dims(self.real_mask, -1), 1)/tf.reduce_sum(self.real_mask, 1, keepdims=True)
+                self.hist_mean = tf.math.divide_no_nan(
+                    tf.reduce_sum(hist_input * tf.expand_dims(self.real_mask, -1), 1),
+                    tf.reduce_sum(self.real_mask, 1, keepdims=True),
+                )
 
             with tf.variable_scope("short_term"):
                 if hparams.interest_evolve:
 
                     rnn_outputs, short_term_intention = dynamic_rnn(
-                        tf.nn.rnn_cell.GRUCell(40),
+                        GRUCell(hparams.hidden_size),
                         inputs=hist_input,
                         sequence_length=self.sequence_length,
                         dtype=tf.float32,
@@ -176,7 +252,10 @@ class CLSRModel(SequentialBaseModel):
                 self.recent_mask = tf.logical_and(self.position >= 1, self.position <= hparams.contrastive_recent_k)
                 self.real_recent_mask = tf.where(self.recent_mask, tf.ones_like(self.recent_mask, dtype=tf.float32), tf.zeros_like(self.recent_mask, dtype=tf.float32))
 
-                self.hist_recent = tf.reduce_sum(hist_input*tf.expand_dims(self.real_recent_mask, -1), 1)/tf.reduce_sum(self.real_recent_mask, 1, keepdims=True)
+                self.hist_recent = tf.math.divide_no_nan(
+                    tf.reduce_sum(hist_input * tf.expand_dims(self.real_recent_mask, -1), 1),
+                    tf.reduce_sum(self.real_recent_mask, 1, keepdims=True),
+                )
                 print(hparams.sequential_model,"hparams.sequential_model")
                 if hparams.sequential_model == 'time4lstm':
                     item_history_embedding_new = tf.concat(
@@ -202,7 +281,7 @@ class CLSRModel(SequentialBaseModel):
                     )
                 elif hparams.sequential_model == 'gru':
                     rnn_outputs, _ = dynamic_rnn(
-                        tf.nn.rnn_cell.GRUCell(hparams.hidden_size),
+                        GRUCell(hparams.hidden_size),
                         inputs=hist_input,
                         sequence_length=self.sequence_length,
                         dtype=tf.float32,
@@ -211,12 +290,14 @@ class CLSRModel(SequentialBaseModel):
                     print("gru+++")
                 elif hparams.sequential_model == 'lstm':
                     rnn_outputs, _ = dynamic_rnn(
-                        tf.nn.rnn_cell.LSTMCell(hparams.hidden_size),
+                        LSTMCell(hparams.hidden_size),
                         inputs=hist_input,
                         sequence_length=self.sequence_length,
                         dtype=tf.float32,
                         scope="simple_lstm",
                     )
+                else:
+                    raise ValueError("sequential_model must be time4lstm, gru, or lstm")
                 tf.summary.histogram("LSTM_outputs", rnn_outputs)
 
                 short_term_query = tf.concat([short_term_intention, self.target_item_embedding], -1)
@@ -231,7 +312,7 @@ class CLSRModel(SequentialBaseModel):
                     if hparams.predict_long_short:
                         with tf.variable_scope("causal2"):
                             _, final_state = dynamic_rnn(
-                                tf.nn.rnn_cell.GRUCell(hparams.hidden_size),
+                                GRUCell(hparams.hidden_size),
                                 inputs=hist_input,
                                 sequence_length=self.sequence_length,
                                 dtype=tf.float32,
@@ -268,10 +349,6 @@ class CLSRModel(SequentialBaseModel):
                     user_embed = self.att_fea_long * self.alpha_output + self.att_fea_short * (1.0 - self.alpha_output)
                     tf.summary.histogram("alpha", self.alpha_output)
                     self.alpha_output_mean = self.alpha_output
-                    error_with_category = self.alpha_output_mean - self.iterator.attn_labels
-                    tf.summary.histogram("error_with_category", error_with_category)
-                    squared_error_with_category = tf.math.sqrt(tf.math.squared_difference(tf.reshape(self.alpha_output_mean, [-1]), tf.reshape(self.iterator.attn_labels, [-1])))
-                    tf.summary.histogram("squared_error_with_category", squared_error_with_category)
                 else:
                     self.alpha_output = tf.constant([[hparams.manual_alpha_value]])
                     user_embed = self.att_fea_long * hparams.manual_alpha_value + self.att_fea_short * (1.0 - hparams.manual_alpha_value)
@@ -355,7 +432,7 @@ class CLSRModel(SequentialBaseModel):
         """
         hparams = self.hparams
         with tf.variable_scope("attention_fcn"):
-            query_size = query.shape[1].value
+            query_size = query.shape.as_list()[1]
             boolean_mask = tf.equal(self.mask, tf.ones_like(self.mask))
 
             attention_mat = tf.get_variable(
@@ -366,7 +443,7 @@ class CLSRModel(SequentialBaseModel):
             att_inputs = tf.tensordot(user_embedding, attention_mat, [[2], [0]])
 
             queries = tf.reshape(
-                tf.tile(query, [1, att_inputs.shape[1].value]), tf.shape(att_inputs)
+                tf.tile(query, [1, tf.shape(att_inputs)[1]]), tf.shape(att_inputs)
             )
             last_hidden_nn_layer = tf.concat(
                 [att_inputs, queries, att_inputs - queries, att_inputs * queries], -1
@@ -383,70 +460,7 @@ class CLSRModel(SequentialBaseModel):
             output = user_embedding * tf.expand_dims(att_weights, -1)
             return output
 
-    def train(self, sess, feed_dict):
-        """Go through the optimization step once with training data in feed_dict.
 
-        Args:
-            sess (obj): The model session object.
-            feed_dict (dict): Feed values to train the model. This is a dictionary that maps graph elements to values.
-
-        Returns:
-            list: A list of values, including update operation, total loss, data loss, and merged summary.
-        """
-        feed_dict[self.layer_keeps] = self.keep_prob_train
-        feed_dict[self.embedding_keeps] = self.embedding_keep_prob_train
-        feed_dict[self.is_train_stage] = True
-        return sess.run(
-            [
-                self.update,
-                self.extra_update_ops,
-                self.loss,
-                self.data_loss,
-                self.regular_loss,
-                self.contrastive_loss,
-                self.discrepancy_loss,
-                self.merged,
-            ],
-            feed_dict=feed_dict,
-        )
-
-    def batch_train(self, file_iterator, train_sess):
-        """Train the model for a single epoch with mini-batches.
-
-        Args:
-            file_iterator (Iterator): iterator for training data.
-            train_sess (Session): tf session for training.
-
-        Returns:
-        epoch_loss: total loss of the single epoch.
-
-        """
-        step = 0
-        epoch_loss = 0
-        epoch_data_loss = 0
-        epoch_regular_loss = 0
-        epoch_contrastive_loss = 0
-        epoch_discrepancy_loss = 0
-        for batch_data_input in file_iterator:
-            if batch_data_input:
-                step_result = self.train(train_sess, batch_data_input)
-                (_, _, step_loss, step_data_loss, step_regular_loss, step_contrastive_loss, step_discrepancy_loss, summary) = step_result
-                if self.hparams.write_tfevents and self.hparams.SUMMARIES_DIR:
-                    self.writer.add_summary(summary, step)
-                epoch_loss += step_loss
-                epoch_data_loss += step_data_loss
-                epoch_regular_loss += step_regular_loss
-                epoch_contrastive_loss += step_contrastive_loss
-                epoch_discrepancy_loss += step_discrepancy_loss
-                step += 1
-                if step % self.hparams.show_step == 0:
-                    print(
-                        "step {0:d} , total_loss: {1:.4f}, data_loss: {2:.4f}".format(
-                            step, step_loss, step_data_loss
-                        )
-                    )
-
-        return epoch_loss
 
     def _add_summaries(self):
         tf.summary.scalar("data_loss", self.data_loss)
