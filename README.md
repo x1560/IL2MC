@@ -93,6 +93,7 @@ python sequential_recsys_amazondataset.py
 | Caser | [IL2MC/recommenders/models/deeprec/models/sequential/caser.py](IL2MC/recommenders/models/deeprec/models/sequential/caser.py) |
 | SLi-Rec | [IL2MC/recommenders/models/deeprec/models/sequential/sli_rec.py](IL2MC/recommenders/models/deeprec/models/sequential/sli_rec.py) |
 | SUM | [IL2MC/recommenders/models/deeprec/models/sequential/sum.py](IL2MC/recommenders/models/deeprec/models/sequential/sum.py) |
+| CLSR | [IL2MC/recommenders/models/deeprec/models/sequential/clsr.py](IL2MC/recommenders/models/deeprec/models/sequential/clsr.py) |
 
 ## Experimental settings
 
