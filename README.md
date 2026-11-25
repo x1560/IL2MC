@@ -83,7 +83,22 @@ Set-Location "examples\00_quick_start"
 python sequential_recsys_amazondataset.py
 ```
 
-## Baselines
+## Model files
+
+The model code is under `Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/`.
+
+### Proposed model
+
+| Implementation | Source | Configuration | `model_sel` |
+| --- | --- | --- | --- |
+| ILMN: Time4LSTM version, closest to the IL2MC architecture described in the paper | [ILMN.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/ILMN.py) | [ILMN.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/ILMN.yaml) | `"ILMN"` |
+| AILMN: attention-based variant | [AILMN.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/AILMN.py) | [AILMN.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/AILMN.yaml) | `"AILMN"` |
+
+Both files contain multi-scale locality modeling, ideal-interest learning, and adaptive mutation calibration. Their Python class is still named `DPRNN4RecModel`; the runner selects the implementation by its module name. The runner currently defaults to `"AILMN"`. Use `"ILMN"` for the Time4LSTM version.
+
+[rnn_cell_implement.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/rnn_cell_implement.py) provides the Time4LSTM cell. [TiSASRec_Modules.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/TiSASRec_Modules.py) supplies attention layers used by AILMN. These are supporting modules.
+
+### Paper baselines
 
 The paper compares IL2MC with the following six methods (Section 6.1.3).
 
@@ -95,6 +110,19 @@ The paper compares IL2MC with the following six methods (Section 6.1.3).
 | CLSR | Uses separate encoders and self-supervised learning to disentangle long-term and short-term interests. |
 | SAPM | Uses preference stability scores to combine long-term interests, short-term interests, and candidate features. |
 | SUM | Maintains multiple interest channels to represent different aspects of user preferences in long sequences. |
+
+The following files are selected by [sequential_recsys_amazondataset.py](Disentangling_Interest_Network_for_Sequential_Recommendation/examples/00_quick_start/sequential_recsys_amazondataset.py):
+
+| Baseline | Source | Configuration | `model_sel` |
+| --- | --- | --- | --- |
+| GRU4Rec | [gru4rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/gru4rec.py) | [gru4rec.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/gru4rec.yaml) | `"gru4rec"` |
+| Caser | [caser.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/caser.py) | [caser.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/caser.yaml) | `"caser"` |
+| SLi-Rec | [sli_rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sli_rec.py) | [sli_rec.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/sli_rec.yaml) | `"sli_rec"` |
+| SUM | [sum.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sum.py) | [sum.yaml](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/config/sum.yaml) | `"sum"` |
+| CLSR | Not included in this snapshot | — | — |
+| SAPM | Not included in this snapshot | — | — |
+
+Set `model_sel` in the runner to the value above, then use the training command. CLSR and SAPM are listed in the paper, but no matching implementation or runner option was found in this repository.
 
 ## Experimental settings
 
