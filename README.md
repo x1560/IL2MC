@@ -93,28 +93,9 @@ python sequential_recsys_amazondataset.py
 | Caser | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/caser.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/caser.py) |
 | SLi-Rec | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sli_rec.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sli_rec.py) |
 | SUM | [Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sum.py](Disentangling_Interest_Network_for_Sequential_Recommendation/recommenders/models/deeprec/models/sequential/sum.py) |
-| CLSR | Not included in this repository |
-| SAPM | Not included in this repository |
 
 ## Experimental settings
 
-Settings reported in the paper (Sections 4.1 and 6.1).
+### 6.1.4 Implementation Details.
 
-| Setting | Value |
-| --- | --- |
-| Datasets | Taobao, MovieLens, Kuaishou |
-| Filtering | Iterative 10-core filtering |
-| Data split | Global chronological split, train/validation/test = 8:1:1 |
-| Negative sampling | Random items the user has not interacted with |
-| Positive-to-negative ratio | 1:4 for training and validation; 1:99 for testing |
-| Metrics | MRR, HR@2, NDCG@2, GAUC (Table 3) |
-| Maximum sequence length | 50 for Taobao, MovieLens, and Kuaishou_50; 100 for Kuaishou_100 |
-| Segmentation scales | 3 for Taobao, MovieLens, and Kuaishou_50; 4 for Kuaishou_100 |
-| Learning rate | `1e-3` |
-| Batch size | `400` |
-| Prediction MLP | `[80, 40]` |
-| L2 regularization | `1e-6` |
-| Framework | Microsoft Recommenders |
-| Hardware / software | NVIDIA RTX 4090, Linux, CUDA 11.6 |
-
-YAML defaults may differ from these paper settings.
+To ensure fairness and facilitate performance comparison, we conduct experiments under the Microsoft Recommenders framework following CLSR [53]. The learning rate is set to 1e-3. For the Taobao and Movielens datasets, the maximum sequence length is set to 𝑀𝑎𝑥𝐿𝑒𝑛= 50, while for the Kuaishou dataset, it is set to 𝑀𝑎𝑥𝐿𝑒𝑛= 50 and 𝑀𝑎𝑥𝐿𝑒𝑛= 100, respectively. The prediction layers of all models is MLP (Multilayer Perceptron) with two hidden layers of dimensions [80, 40]. The ratio of positive to negative examples in the training and validation set is 1:4, and in the testing set, it is 1:99, with the batch size being set to 400. We set the regularization strength 𝛾 to 1e-6. For the set size in the segmentation step |𝐿| in our model, we set it to 3 for the Taobao, Movielens, and Kuaishou_50 datasets, and to 4 for the Kuaishou_100 dataset. All experiments are conducted on Linux servers equipped with NVIDIA RTX 4090 GPU, using CUDA Version 11.6.
