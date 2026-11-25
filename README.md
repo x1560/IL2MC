@@ -1,6 +1,8 @@
-# Running the Code
+# IL2MC
 
-## 1. Create an environment and install dependencies
+The commands below use Windows PowerShell. Start in the repository root.
+
+## Setup
 
 ```powershell
 conda create -n il2mc python=3.8 -y
@@ -8,28 +10,28 @@ conda activate il2mc
 python -m pip install -r requirements.txt
 ```
 
-**Dependency note:** The current `requirements.txt` contains references to local Linux files (`@ file:///home/...` and `@ file:///tmp/...`). Replace these references with installable package specifications and appropriate versions before running the installation command.
+Some entries in `requirements.txt` point to local Linux files (`@ file:///home/...` or `@ file:///tmp/...`). Replace them with package names and matching versions before installing.
 
-## 2. Download the datasets
+## Data
 
-The datasets are publicly available from their providers. Download them separately instead of committing raw data, processed data, training logs, or model checkpoints to GitHub.
+Download the datasets from the links below. Data files and training outputs are not included in this repository.
 
-| Dataset | Download page | Local input filenames |
+| Dataset | Download | Filenames used by the code |
 | --- | --- | --- |
-| Taobao UserBehavior | [Tianchi](https://tianchi.aliyun.com/dataset/649) | Rename the extracted `UserBehavior.csv` to `taobao_user_behavior.csv`. |
-| MovieLens | [GroupLens](https://grouplens.org/datasets/movielens/) | Rename the compatible ratings file to `movie.csv` and the movie metadata file to `movie_meta.csv`. |
-| Kuaishou / KuaiRec | [KuaiRec](https://kuairec.com/) | Rename `big_matrix.csv` to `kuaishou_big_matrix.csv` and `item_categories.csv` to `kuaishou_item_feat.csv`. |
+| Taobao UserBehavior | [Tianchi](https://tianchi.aliyun.com/dataset/649) | `UserBehavior.csv` → `taobao_user_behavior.csv` |
+| MovieLens | [GroupLens](https://grouplens.org/datasets/movielens/) | Compatible ratings file → `movie.csv`; movie metadata → `movie_meta.csv` |
+| Kuaishou / KuaiRec | [KuaiRec](https://kuairec.com/) | `big_matrix.csv` → `kuaishou_big_matrix.csv`; `item_categories.csv` → `kuaishou_item_feat.csv` |
 
-Place the extracted input files in:
+Extract and rename the files, then place them in:
 
 ```text
 Disentangling_Interest_Network_for_Sequential_Recommendation/
   tests/resources/deeprec/slirec/
 ```
 
-## 3. Preprocess a dataset
+## Preprocessing
 
-From the directory containing this README, run the following commands. Set `$dataset` to `taobao`, `ml`, or `kuaishou`.
+Run from the repository root. Set `$dataset` to `taobao`, `ml`, or `kuaishou`.
 
 ```powershell
 Set-Location "Disentangling_Interest_Network_for_Sequential_Recommendation"
@@ -70,11 +72,11 @@ data_preprocessing(
 '@ | python - $dataset
 ```
 
-This calls the existing preprocessing function without launching model training. It generates `train_data`, `valid_data`, `test_data`, vocabulary files, and `itemidx2cat.pkl`. Each run rewrites the outputs in the same directory; keep separate copies if preparing multiple datasets. Processing large datasets requires sufficient memory and disk space.
+The output directory contains `train_data`, `valid_data`, `test_data`, the vocabularies, and `itemidx2cat.pkl`. Running preprocessing again overwrites these files. Back them up before switching datasets.
 
-## 4. Run the model
+## Training
 
-After preprocessing, while still in the project directory, set `datatype` in `examples/00_quick_start/sequential_recsys_amazondataset.py` to the dataset you processed (`taobao`, `ml`, or `kuaishou`). Then run:
+Set `datatype` in `examples/00_quick_start/sequential_recsys_amazondataset.py` to the dataset you processed. From the project directory used above, run:
 
 ```powershell
 Set-Location "examples\00_quick_start"
