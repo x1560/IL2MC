@@ -1,0 +1,77 @@
+#data
+#data format:sequential model 
+data: 
+    user_vocab : ./tests/resources/deeprec/slirec/user_vocab.pkl # the map file of user to id
+    item_vocab : ./tests/resources/deeprec/slirec/item_vocab.pkl # the map file of item to id
+    cate_vocab : ./tests/resources/deeprec/slirec/category_vocab.pkl # the map file of category to id
+    itemidx2cat: ./tests/resources/deeprec/slirec/itemidx2cat.pkl
+#model
+model:
+    method : classification # classification or regression
+    model_type : sli_rec
+    layer_sizes : [100, 64]  # layers' size of DNN. In this example, DNN has two layers, and each layer has 100 hidden nodes.
+    att_fcn_layer_sizes : [80,40]
+    activation : [relu, relu] # activation function for DNN
+    user_dropout: True
+    dropout : [0., 0.]  #drop out values for DNN layer
+    item_embedding_dim : 32 # the embedding dimension of items
+    cate_embedding_dim : 8  # the embedding dimension of categories
+    user_embedding_dim : 16 # the embedding dimension of users
+
+    useShareIpPool: False
+    ipNum: 32
+    attention_fcn_alpha_fuse: False
+    time_stable_aware_fuse: False
+    userCollMutation: False
+    useTimeInterval: False
+    ui_ip_coll: False
+
+    coll_muta_ip_ssl_regu: 0.01
+    itemMutation: True
+    item_ip_coll: True
+    reconstruct_item: False
+    time_range: 30
+    filter_name_key: []#["mutation"]
+    unfreeze_keys: []#["mutation"]
+#train
+#init_method: normal,tnormal,uniform,he_normal,he_uniform,xavier_normal,xavier_uniform
+train:
+    init_method: tnormal  # method for initializing model parameters
+    init_value : 0.01 # stddev values for initializing model parameters
+    embed_l2 : 0.000001 # l2 regularization for embedding parameters
+    embed_l1 : 0.0000 # l1 regularization for embedding parameters
+    layer_l2 : 0.000001 # l2 regularization for hidden layer parameters
+    layer_l1 : 0.0000 # l1 regularization for hidden layer parameters
+    cross_l2 : 0.0000  # l2 regularization for cross layer parameters
+    cross_l1 : 0.000   # l1 regularization for cross layer parameters
+    learning_rate : 0.001
+    loss : softmax    # pointwise: log_loss, cross_entropy_loss, square_loss  pairwise: softmax
+    optimizer : adam  # adam, adadelta, sgd, ftrl, gd, padagrad, pgd, rmsprop
+    epochs : 50  #   number of epoch for training
+    batch_size : 500  # batch size, should be constrained as an integer multiple of the number of (1 + train_num_ngs) when need_sample is True
+    enable_BN : True  # whether to use batch normalization in hidden layers
+    EARLY_STOP : 4 # the number of epoch that controls EARLY STOPPING
+    min_seq_length: 5 # the minimum number of records in the history sequence
+    max_seq_length : 50 # the maximum number of records in the history sequence
+    hidden_size : 40 # the shape of hidden size used in RNN
+    attention_size : 40 # the shape of attention size
+    need_sample: False # whether to perform dynamic negative sampling in mini-batch
+    train_num_ngs: 4 # indicates how many negative instances followed by one positive instances if need_sample is True
+    valid_num_ngs: 4 # number of negative instances with a positive instance for validation/test
+    test_num_ngs : 99 # number of negative instances with a positive instance for validation/test
+    useCate: True
+
+#show info
+#metric :'auc', 'logloss', 'group_auc'
+info:
+    show_step : 400   # print training information after a certain number of mini-batch
+    save_model: True   # whether to save modl
+    save_epoch : 1    # if save_model is set to True, save the model every save_epoch.
+    metrics : ['auc']  # metrics for evaluation. #['auc','logloss']
+    pairwise_metrics : ['mean_mrr', 'ndcg@2;6','hit@2;6','group_auc']  # pairwise metrics for evaluation, available when pairwise comparisons are needed
+#    other_metrics_basedOn_RecList: [ 'ILD@8;16','coverage@8;16']
+
+    MODEL_DIR : ./tests/resources/deeprec/slirec_org_kuaishou_maxl100_mutaRegu_newtrain_r3/model/slirec_model/ # directory of saved models.
+    SUMMARIES_DIR : ./tests/resources/deeprec/slirec_org_kuaishou_maxl100_mutaRegu_newtrain_r3/summary/slirec_summary/  # directory of saved summaries.
+    write_tfevents : False  # whether to save summaries.
+
